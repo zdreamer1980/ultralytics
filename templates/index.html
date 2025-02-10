@@ -1,0 +1,158 @@
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>安全文件管理系统</title>
+
+    <!-- 引入 Bootstrap 样式 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- 引入 Bootstrap JS 和 Popper.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.min.js"></script>
+
+    <style>
+        .container { max-width: 800px; margin-top: 30px; }
+        .file-list { margin-top: 20px; }
+        .file-list ul { list-style-type: none; padding: 0; }
+        .file-list li { padding: 5px; border: 1px solid #ddd; margin-bottom: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2 class="text-center mb-4">🔒 安全文件管理系统</h2>
+
+        <!-- 页签导航 -->
+        <ul class="nav nav-tabs" id="myTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <a class="nav-link active" id="register-tab" data-bs-toggle="tab" href="#register" role="tab" aria-controls="register" aria-selected="true">用户注册</a>
+            </li>
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" id="login-tab" data-bs-toggle="tab" href="#login" role="tab" aria-controls="login" aria-selected="false">用户登录</a>
+            </li>
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" id="file-tab" data-bs-toggle="tab" href="#file" role="tab" aria-controls="file" aria-selected="false">文件管理</a>
+            </li>
+        </ul>
+
+        <!-- 页签内容 -->
+        <div class="tab-content mt-3" id="myTabContent">
+            <!-- 用户注册 -->
+            <div class="tab-pane fade show active" id="register" role="tabpanel" aria-labelledby="register-tab">
+                <h4>📝 用户注册</h4>
+                <form id="register-form">
+                    <div class="mb-3">
+                        <input type="text" id="reg_username" class="form-control" placeholder="用户名" required>
+                    </div>
+                    <div class="mb-3">
+                        <input type="password" id="reg_password" class="form-control" placeholder="密码" required>
+                    </div>
+                    <button type="button" class="btn btn-primary" onclick="register()">注册</button>
+                </form>
+            </div>
+
+            <!-- 用户登录 -->
+            <div class="tab-pane fade" id="login" role="tabpanel" aria-labelledby="login-tab">
+                <h4>🧑‍💻 用户登录</h4>
+                <form id="login-form">
+                    <div class="mb-3">
+                        <input type="text" id="username" class="form-control" placeholder="用户名" required>
+                    </div>
+                    <div class="mb-3">
+                        <input type="password" id="password" class="form-control" placeholder="密码" required>
+                    </div>
+                    <button type="button" class="btn btn-success" onclick="login()">登录</button>
+                </form>
+            </div>
+
+            <!-- 文件管理 -->
+            <div class="tab-pane fade" id="file" role="tabpanel" aria-labelledby="file-tab">
+                <h4>📂 文件管理</h4>
+                <form id="file-form">
+                    <div class="mb-3">
+                        <input type="file" id="fileElem" class="form-control" required>
+                    </div>
+                    <button type="button" class="btn btn-info" onclick="uploadFile()">上传文件</button>
+                </form>
+
+                <h5 class="mt-4">📜 已上传文件</h5>
+                <ul id="file-list" class="file-list"></ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- 引入 JS -->
+    <script>
+        let token = '';
+
+        // 用户注册
+        async function register() {
+            let username = document.getElementById('reg_username').value;
+            let password = document.getElementById('reg_password').value;
+            let response = await fetch('/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+            let result = await response.json();
+            if (result.message) {
+                alert('注册成功，请登录！');
+                document.getElementById('reg_username').value = '';
+                document.getElementById('reg_password').value = '';
+            } else {
+                alert(result.error);
+            }
+        }
+
+        // 用户登录
+        async function login() {
+            let username = document.getElementById('username').value;
+            let password = document.getElementById('password').value;
+            let response = await fetch('/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+            let result = await response.json();
+            if (result.access_token) {
+                token = result.access_token;
+                alert('登录成功！');
+                document.getElementById('username').value = '';
+                document.getElementById('password').value = '';
+                loadFiles();
+            } else {
+                alert(result.error);
+            }
+        }
+
+        // 上传文件
+        async function uploadFile() {
+            let fileInput = document.getElementById('fileElem');
+            let formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            let response = await fetch('/upload', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
+                body: formData
+            });
+            let result = await response.json();
+            alert(result.message);
+            loadFiles();
+        }
+
+        // 获取文件列表
+        async function loadFiles() {
+            let response = await fetch('/files', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            let files = await response.json();
+            let fileList = document.getElementById('file-list');
+            fileList.innerHTML = '';
+            files.forEach(file => {
+                let li = document.createElement('li');
+                li.innerText = file;
+                fileList.appendChild(li);
+            });
+        }
+    </script>
+</body>
